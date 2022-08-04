@@ -61,16 +61,18 @@ class BP_REST_Attachments_Member_Avatar_Endpoint extends WP_REST_Controller {
 	 * @since 0.1.0
 	 */
 	public function register_routes() {
+		$default_args = array(
+			'user_id' => array(
+				'description' => __( 'A unique numeric ID for the Member.', 'buddypress' ),
+				'type'        => 'integer',
+			),
+		);
+
 		register_rest_route(
 			$this->namespace,
 			'/' . $this->rest_base . '/(?P<user_id>[\d]+)/avatar',
 			array(
-				'args'   => array(
-					'user_id' => array(
-						'description' => __( 'A unique numeric ID for the Member.', 'buddypress' ),
-						'type'        => 'integer',
-					),
-				),
+				'args'   => $default_args,
 				array(
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_item' ),
@@ -81,6 +83,27 @@ class BP_REST_Attachments_Member_Avatar_Endpoint extends WP_REST_Controller {
 					'methods'             => WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_item' ),
 					'permission_callback' => array( $this, 'create_item_permissions_check' ),
+					'args'                => array_merge(
+						$default_args,
+						array(
+							'crop_w' => array(
+								'description' => __( 'The crop width.', 'buddypress' ),
+								'type'        => 'integer',
+							),
+							'crop_h' => array(
+								'description' => __( 'The crop height.', 'buddypress' ),
+								'type'        => 'integer',
+							),
+							'crop_x' => array(
+								'description' => __( 'The horizontal starting point of the crop.', 'buddypress' ),
+								'type'        => 'integer',
+							),
+							'crop_y' => array(
+								'description' => __( 'The vertical starting point of the crop.', 'buddypress' ),
+								'type'        => 'integer',
+							),
+						)
+					)
 				),
 				array(
 					'methods'             => WP_REST_Server::DELETABLE,
@@ -195,6 +218,14 @@ class BP_REST_Attachments_Member_Avatar_Endpoint extends WP_REST_Controller {
 	public function create_item( $request ) {
 		$request->set_param( 'context', 'edit' );
 
+		// Get crop arguments from the request.
+		$crop_args = array(
+			'crop_w' => $request->get_param( 'crop_w' ),
+			'crop_h' => $request->get_param( 'crop_h' ),
+			'crop_x' => $request->get_param( 'crop_x' ),
+			'crop_y' => $request->get_param( 'crop_y' ),
+		);
+
 		// Get the image file from  $_FILES.
 		$files = $request->get_file_params();
 
@@ -209,7 +240,7 @@ class BP_REST_Attachments_Member_Avatar_Endpoint extends WP_REST_Controller {
 		}
 
 		// Upload the avatar.
-		$avatar = $this->upload_avatar_from_file( $files );
+		$avatar = $this->upload_avatar_from_file( $files, $crop_args );
 		if ( is_wp_error( $avatar ) ) {
 			return $avatar;
 		}

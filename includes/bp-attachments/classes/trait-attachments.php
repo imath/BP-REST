@@ -152,9 +152,10 @@ trait BP_REST_Attachments {
 	 * @since 0.1.0
 	 *
 	 * @param array $files $_FILES superglobal.
+	 * @param array $args The crop arguments.
 	 * @return stdClass|WP_Error
 	 */
-	protected function upload_avatar_from_file( $files ) {
+	protected function upload_avatar_from_file( $files, $args ) {
 
 		// Set global variables.
 		$bp = buddypress();
@@ -173,6 +174,7 @@ trait BP_REST_Attachments {
 
 		$avatar_attachment = $this->avatar_instance;
 		$avatar_original   = $avatar_attachment->upload( $files, $upload_main_dir );
+		$cropped           = null;
 
 		// Bail early in case of an error.
 		if ( ! empty( $avatar_original['error'] ) ) {
@@ -190,41 +192,79 @@ trait BP_REST_Attachments {
 			);
 		}
 
-		// Get image and bail early if there is an error.
-		$image_file = $this->resize( $avatar_original['file'] );
-		if ( is_wp_error( $image_file ) ) {
-			return $image_file;
-		}
+		if ( array_filter( $args ) ) {
+			// Delete existing image if one exists.
+			$this->delete_existing_image();
 
-		// If the uploaded image is smaller than the "full" dimensions, throw a warning.
-		if ( $avatar_attachment->is_too_small( $image_file ) ) {
-			$full_width  = bp_core_avatar_full_width();
-			$full_height = bp_core_avatar_full_height();
-
-			return new WP_Error(
-				"bp_rest_attachments_{$this->object}_avatar_error",
-				sprintf(
-					/* translators: %1$s and %2$s is replaced with the correct sizes. */
-					__( 'You have selected an image that is smaller than recommended. For best results, upload a picture larger than %1$s x %2$s pixels.', 'buddypress' ),
-					$full_width,
-					$full_height
-				),
+			$crop_args = bp_parse_args(
+				array_map( 'intval', $args ),
 				array(
-					'status'     => 400,
-					'reason'     => 'image_too_small',
-					'min_width'  => $full_width,
-					'min_height' => $full_height,
+					'crop_x'         => 0,
+					'crop_y'         => 0,
+					'crop_w'         => 0,
+					'crop_h'         => 0,
 				)
 			);
+
+			add_filter( 'bp_attachments_current_user_can', '__return_true' );
+
+			// Crop the profile photo according to crop args.
+			$cropped = $avatar_attachment->crop(
+				array_merge(
+					$crop_args,
+					array(
+						'object'        => $this->object,
+						'avatar_dir'    => ( 'group' === $this->object ) ? 'group-avatars' : 'avatars',
+						'item_id'       => $this->get_item_id(),
+						'original_file' => $avatar_original['file'],
+					)
+				)
+			);
+
+			remove_filter( 'bp_attachments_current_user_can', '__return_false' );
+
+			if ( is_wp_error( $cropped ) ) {
+				return $cropped;
+			}
+		} else {
+			// Get image and bail early if there is an error.
+			$image_file = $this->resize( $avatar_original['file'] );
+			if ( is_wp_error( $image_file ) ) {
+				return $image_file;
+			}
+
+			// If the uploaded image is smaller than the "full" dimensions, throw a warning.
+			if ( $avatar_attachment->is_too_small( $image_file ) ) {
+				$full_width  = bp_core_avatar_full_width();
+				$full_height = bp_core_avatar_full_height();
+
+				return new WP_Error(
+					"bp_rest_attachments_{$this->object}_avatar_error",
+					sprintf(
+						/* translators: %1$s and %2$s is replaced with the correct sizes. */
+						__( 'You have selected an image that is smaller than recommended. For best results, upload a picture larger than %1$s x %2$s pixels.', 'buddypress' ),
+						$full_width,
+						$full_height
+					),
+					array(
+						'status'     => 400,
+						'reason'     => 'image_too_small',
+						'min_width'  => $full_width,
+						'min_height' => $full_height,
+					)
+				);
+			}
 		}
 
-		// Delete existing image if one exists.
-		$this->delete_existing_image();
-
 		// Crop the profile photo accordingly and bail early in case of an error.
-		$cropped = $this->crop_image( $image_file );
-		if ( is_wp_error( $cropped ) ) {
-			return $cropped;
+		if ( is_null( $cropped ) ) {
+			// Delete existing image if one exists.
+			$this->delete_existing_image();
+
+			$cropped = $this->crop_image( $image_file );
+			if ( is_wp_error( $cropped ) ) {
+				return $cropped;
+			}
 		}
 
 		// Set the arguments for the avatar.
