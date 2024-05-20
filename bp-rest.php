@@ -78,6 +78,12 @@ function bp_rest() {
 			$controller = new BP_REST_Signup_Endpoint();
 			$controller->register_routes();
 		}
+
+		if ( bp_is_active( 'members', 'notices' ) ) {
+			require_once __DIR__ . '/includes/bp-members/classes/class-bp-rest-sitewide-notices-endpoint.php';
+			$controller = new BP_REST_Sitewide_Notices_Endpoint();
+			$controller->register_routes();
+		}
 	}
 
 	if ( bp_is_active( 'activity' ) ) {
@@ -147,10 +153,6 @@ function bp_rest() {
 	if ( bp_is_active( 'messages' ) ) {
 		require_once __DIR__ . '/includes/bp-messages/classes/class-bp-rest-messages-endpoint.php';
 		$controller = new BP_REST_Messages_Endpoint();
-		$controller->register_routes();
-
-		require_once __DIR__ . '/includes/bp-messages/classes/class-bp-rest-sitewide-notices-endpoint.php';
-		$controller = new BP_REST_Sitewide_Notices_Endpoint();
 		$controller->register_routes();
 	}
 
