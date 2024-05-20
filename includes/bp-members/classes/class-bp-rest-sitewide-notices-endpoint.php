@@ -125,7 +125,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 			 */
 			$args = apply_filters( 'bp_rest_sitewide_notices_get_items_query_args', $args, $request );
 
-			$notices = BP_Messages_Notice::get_notices( $args );
+			$notices = BP_Members_Notice::get_notices( $args );
 
 			$retval = array();
 			foreach ( (array) $notices as $notice ) {
@@ -135,12 +135,12 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 			}
 
 			$response = rest_ensure_response( $retval );
-			$response = bp_rest_response_add_total_headers( $response, BP_Messages_Notice::get_total_notice_count(), $args['pag_num'] );
+			$response = bp_rest_response_add_total_headers( $response, BP_Members_Notice::get_total_notice_count(), $args['pag_num'] );
 
 		} else {
 			// Ordinary users, or Admins who aren't currently managing notices, only get the most recent notice.
 			$retval  = array();
-			$notice  = BP_Messages_Notice::get_active();
+			$notice  = BP_Members_Notice::get_active();
 			$notices = array();
 			if ( ! empty( $notice ) ) {
 				// Make sure the user hasn't already dismissed it.
@@ -231,7 +231,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 		 *
 		 * @since 9.0.0
 		 *
-		 * @param BP_Messages_Notice $notice  Notice object.
+		 * @param BP_Members_Notice $notice  Notice object.
 		 * @param WP_REST_Response   $retval  The response data.
 		 * @param WP_REST_Request    $request The request sent to the API.
 		 */
@@ -319,7 +319,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 		}
 
 		// The notice we just created will be active.
-		$notice        = BP_Messages_Notice::get_active();
+		$notice        = BP_Members_Notice::get_active();
 		$fields_update = $this->update_additional_fields_for_object( $notice, $request );
 
 		if ( is_wp_error( $fields_update ) ) {
@@ -334,7 +334,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 		 *
 		 * @since 9.0.0
 		 *
-		 * @param BP_Messages_Notice $notice   Notice object.
+		 * @param BP_Members_Notice $notice   Notice object.
 		 * @param WP_REST_Response   $response The response data.
 		 * @param WP_REST_Request    $request  The request sent to the API.
 		 */
@@ -414,7 +414,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 		 *
 		 * @since 9.0.0
 		 *
-		 * @param BP_Messages_Notice $updated_notice The notice object.
+		 * @param BP_Members_Notice $updated_notice The notice object.
 		 * @param WP_REST_Response   $response       The response data.
 		 * @param WP_REST_Request    $request        The request sent to the API.
 		 */
@@ -455,7 +455,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 	 */
 	public function dismiss_notice( $request ) {
 		// Mark the active notice as closed.
-		$notice = BP_Messages_Notice::get_active();
+		$notice = BP_Members_Notice::get_active();
 
 		if ( ! $notice->id ) {
 			return new WP_Error(
@@ -471,7 +471,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 		$previous = $this->prepare_item_for_response( $notice, $request );
 
 		// Dismiss the active notice for the current user.
-		$dismissed = bp_messages_dismiss_sitewide_notice();
+		$dismissed = bp_members_dismiss_notice();
 
 		// Build the response.
 		$response = new WP_REST_Response();
@@ -487,7 +487,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 		 *
 		 * @since 9.0.0
 		 *
-		 * @param BP_Messages_Notice  $notice   Notice object.
+		 * @param BP_Members_Notice  $notice   Notice object.
 		 * @param WP_REST_Response    $response The response data.
 		 * @param WP_REST_Request     $request  The request sent to the API.
 		 */
@@ -579,7 +579,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 		 *
 		 * @since 9.0.0
 		 *
-		 * @param BP_Messages_Notice $notice  Notice object.
+		 * @param BP_Members_Notice $notice  Notice object.
 		 * @param WP_REST_Response   $response The response data.
 		 * @param WP_REST_Request    $request  The request sent to the API.
 		 */
@@ -649,7 +649,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 	 *
 	 * @since 9.0.0
 	 *
-	 * @param BP_Messages_Notice $notice Notice object.
+	 * @param BP_Members_Notice $notice Notice object.
 	 * @return array
 	 */
 	protected function prepare_links( $notice ) {
@@ -671,7 +671,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 		 * @since 9.0.0
 		 *
 		 * @param array              $links   The prepared links of the REST response.
-		 * @param BP_Messages_Notice $notice  Notice object.
+		 * @param BP_Members_Notice $notice  Notice object.
 		 */
 		return apply_filters( 'bp_rest_sitewide_notices_prepare_links', $links, $notice );
 	}
@@ -681,7 +681,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 	 *
 	 * @since 9.0.0
 	 *
-	 * @param BP_Messages_Notice $notice  The notice object.
+	 * @param BP_Members_Notice $notice  The notice object.
 	 * @param WP_REST_Request    $request Full details about the request.
 	 * @return WP_REST_Response
 	 */
@@ -716,7 +716,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 		 *
 		 * @param WP_REST_Response   $response Response generated by the request.
 		 * @param WP_REST_Request    $request  Request used to generate the response.
-		 * @param BP_Messages_Notice $notice   The notice object.
+		 * @param BP_Members_Notice $notice   The notice object.
 		 */
 		return apply_filters( 'bp_rest_sitewide_notices_prepare_value', $response, $request, $notice );
 	}
@@ -727,10 +727,10 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 	 * @since 9.0.0
 	 *
 	 * @param int $id Notice ID.
-	 * @return BP_Messages_Notice
+	 * @return BP_Members_Notice
 	 */
 	public function get_notice_object( $id ) {
-		$notice = new BP_Messages_Notice( $id );
+		$notice = new BP_Members_Notice( $id );
 
 		if ( ! $notice->date_sent ) {
 			$notice->id = null;
@@ -925,7 +925,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 	 * @since 9.0.0
 	 *
 	 * @param WP_REST_Request $request Request object.
-	 * @return BP_Messages_Notice|WP_Error Object or WP_Error.
+	 * @return BP_Members_Notice|WP_Error Object or WP_Error.
 	 */
 	protected function prepare_item_for_database( $request ) {
 		$schema        = $this->get_item_schema();
@@ -971,7 +971,7 @@ class BP_REST_Sitewide_Notices_Endpoint extends WP_REST_Controller {
 		 *
 		 * @since 9.0.0
 		 *
-		 * @param BP_Messages_Notice $prepared_item A BP_Messages_Notice object prepared for inserting or updating the database.
+		 * @param BP_Members_Notice $prepared_item A BP_Members_Notice object prepared for inserting or updating the database.
 		 * @param WP_REST_Request $request Request object.
 		 */
 		return apply_filters( 'bp_rest_sitewide_notices_pre_update_value', $prepared_item, $request );
